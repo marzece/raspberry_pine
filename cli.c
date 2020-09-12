@@ -281,24 +281,24 @@ int write_drw(uint32_t* args) {
 }
 
 Command commandTable[] = {
-    {"swd_reset", 1, swd_reset},
-    {"jtag_to_swd", 1, jtag_to_swd},
-    {"write_select", 4, write_select_reg},
-    {"read_dpid", 1, read_dpid},
-    {"read_idrcode", 1, read_idrcode},
-    {"write_abort", 2, write_abort},
-    {"read_ctrlstat", 1, read_ctrlstat},
-    {"clear_stickyerr", 1, clear_stickyerr},
-    {"read_prot_status", 1, read_protect_status},
-    {"read_erase_status", 1, read_erase_status},
-    {"do_erase_all", 1, do_erase_all},
-    {"control_debug_power", 2, control_debug_power},
-    {"read_ap_addr", 2, read_ap_addr},
-    {"read_ap_csw", 1, read_csw},
-    {"read_tar", 1, read_tar},
-    {"read_drw", 1, read_drw},
-    {"write_tar", 2, write_tar},
-    {"write_drw", 2, write_drw},
+    {"swd_reset", 0, swd_reset},
+    {"jtag_to_swd", 0, jtag_to_swd},
+    {"write_select", 3, write_select_reg},
+    {"read_dpid", 0, read_dpid},
+    {"read_idrcode", 0, read_idrcode},
+    {"write_abort", 1, write_abort},
+    {"read_ctrlstat", 0, read_ctrlstat},
+    {"clear_stickyerr", 0, clear_stickyerr},
+    {"read_prot_status", 0, read_protect_status},
+    {"read_erase_status", 0, read_erase_status},
+    {"do_erase_all", 0, do_erase_all},
+    {"control_debug_power", 1, control_debug_power},
+    {"read_ap_addr", 1, read_ap_addr},
+    {"read_ap_csw", 0, read_csw},
+    {"read_tar", 0, read_tar},
+    {"read_drw", 0, read_drw},
+    {"write_tar", 1, write_tar},
+    {"write_drw", 1, write_drw},
     {NULL, 0, NULL} // Must be last
 };
 
@@ -374,9 +374,9 @@ void handle_line(char* line) {
         thisCommand++;
     }
 
-    if(thisCommand->nargs != ntoks) {
+    if(thisCommand->nargs != ntoks-1) {
         printf("Incorrect number of arguements supplied for \"%s\", %i given, %i required\n",
-               thisCommand->name, thisCommand->nargs-1, ntoks-1);
+               thisCommand->name, thisCommand->nargs, ntoks-1);
         return;
     }
 
