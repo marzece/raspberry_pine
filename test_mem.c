@@ -120,7 +120,7 @@ int perform_swd_io(SPIRegisters spi_registers, SWD_Packet* packet_data) {
     // If this was a read-op then get the data back and stuff in "packet_data"
     if(packet_data->header.RnW) {
         packet_data->data = spi_data.miso[0] | (spi_data.miso[1] << 16);
-        packet_data->parity = (spi_data.miso[1] >> 17) & 0x1;
+        packet_data->parity = (spi_data.miso[1] >> 16) & 0x1;
 
         int expected_parity = !has_even_parity(packet_data->data, 32);
 
