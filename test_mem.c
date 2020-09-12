@@ -201,10 +201,12 @@ int main() {
     write_control_reg(spi_registers, control_reg);
 
     // Perform a SWD line reset
+    printf("performing reset\n");
     SPI_Data swd_to_jtag_data = swd_jtag_to_swd();
     SPI_Data reset_data = swd_protocol_reset();
     spi_io(spi_registers, &reset_data);
     spi_io(spi_registers, &swd_to_jtag_data);
+    spi_io(spi_registers, &reset_data);
     spi_io(spi_registers, &reset_data);
     sleep(1);
 
@@ -220,48 +222,38 @@ int main() {
     printf("version = 0x%x\n", idr_reg.version);
     printf("designer = 0x%x\n", idr_reg.designer);
     printf("\n");
-    sleep(1);
-    SWD_Packet read_ctrlstat_reg = debug_power(spi_registers, 1);
 
-    SWD_SELECT_Reg select_reg = { .APSEL = 0x0, .APBANKSEL = 0x0, .DPBANKSEL = 0x0 };
+    debug_power(spi_registers, 1);
+
+    // AP_SEL=1 is the CTRL_AP AP_SEL=0 is the AHB MEM_AP
+    // Now read the CTRL-AP ID Register Address=0xFC
+    SWD_SELECT_Reg select_reg = { .APSEL = 0x1, .APBANKSEL = 0xF, .DPBANKSEL = 0x0 };
     SWD_Packet write_select_packet = swd_write_select_reg(select_reg);
     perform_swd_io(spi_registers, &write_select_packet);
-    
-    sleep(1);
 
+    // Now write with AP =1 adn addr[3:2] = 0b11 
+    SWD_Packet read_ap_id_packet = swd_read_ap_idcode();
+    perform_swd_io(spi_registers, &read_ap_id_packet);
+    perform_swd_io(spi_registers, &read_ap_id_packet); // For AP access need to perform a read twice
+    printf("IDR = 0x%x\n", read_ap_id_packet.data);
 
-    perform_swd_io(spi_registers, &read_ctrlstat_reg);
-    printf("CNTRL_STAT = 0x%x\n", read_ctrlstat_reg.data);
+    select_reg.DPBANKSEL = 0x0;
+    select_reg.APBANKSEL = 0x0;
+    select_reg.APSEL = 0x0;
+    write_select_packet = swd_write_select_reg(select_reg);
+    perform_swd_io(spi_registers, &write_select_packet);
 
-    // Now read the CTRL-AP ID Code
-    //select_reg.DPBANKSEL = 0x0;
-    //select_reg.APBANKSEL = 0x0;
-    //select_reg.APSEL = 0x0;
-    //write_select_packet = swd_write_select_reg(select_reg);
-    //perform_swd_io(spi_registers, &write_select_packet);
+    SWD_Packet read_protect_status_reg = swd_read_protect_status_reg();
+    perform_swd_io(spi_registers, &read_protect_status_reg);
+    perform_swd_io(spi_registers, &read_protect_status_reg);
+    printf("Protect Status = 0x%x\n", read_protect_status_reg.data);
+    perform_swd_io(spi_registers, &read_protect_status_reg);
+    perform_swd_io(spi_registers, &read_protect_status_reg);
+    printf("Protect Status = 0x%x\n", read_protect_status_reg.data);
 
-    // Now write with AP =1 adn addr[3:2] = 0b11
-    //SWD_Packet read_ap_id_packet = swd_read_ap_idcode();
-    //perform_swd_io(spi_registers, &read_ap_id_packet);
-    //printf("IDR = 0x%x\n", read_ap_id_packet.data);
+    // Perform an "eraseall" to remove firmware lock
     //SWD_Packet write_eraseall_reg = swd_ap_write_eraseall();
     //perform_swd_io(spi_registers, &write_eraseall_reg);
-
-    //SWD_Packet read_protect_status_reg = swd_read_protect_status_reg();
-    //perform_swd_io(spi_registers, &read_protect_status_reg);
-    //printf("Protect Status = 0x%x\n", read_protect_status_reg.data);
-    //perform_swd_io(spi_registers, &read_protect_status_reg);
-    //printf("Protect Status = 0x%x\n", read_protect_status_reg.data);
-
-    //printf("IDCODE = 0x%x\n", read_ap_id_packet.data);
-    //perform_swd_io(spi_registers, &read_ctrlstat_reg);
-    //printf("CNTRL_STAT = 0x%x\n", read_ctrlstat_reg.data);
-
-    // read readbuf
-    //SWD_Packet read_rdbuff_reg = swd_read_readbuff();
-    //perform_swd_io(spi_registers, &read_rdbuff_reg);
-    //printf("RDBUFF = 0x%x\n", read_rdbuff_reg.data);
-    //SWD_APIDRCode idrcode = interpret_ap_idr_code(read_rdbuff_reg.data);
 
 
     // Clean up
