@@ -16,4 +16,4 @@ rbpi.o: rbpi.c
 	cc -g -c $^ -o $@
 
 clean:
-	rm -rf *.o test_mem
+	rm -rf *.o test_mem cli
