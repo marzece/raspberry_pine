@@ -161,10 +161,6 @@ SWD_Packet debug_power(SPIRegisters spi_registers, int powerup) {
     return read_ctrlstat_reg;
 }
 
-
-
-
-
 int main() {
 
     uint32_t* mem = create_gpio_mmap();

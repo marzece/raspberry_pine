@@ -171,6 +171,16 @@ int read_ap_addr(uint32_t* args) {
     return 0;
 };
 
+int write_ap_addr(uint32_t* args) {
+    uint8_t addr = args[0];
+    uint32_t data = args[1];
+    SWD_Packet packet = swd_write_ap_addr(addr, data);
+    perform_swd_io(spi_registers, &packet);
+
+    printf("Value at addr=0x%x = 0x%x\n", addr, packet.data);
+    return 0;
+}
+
 int write_abort(uint32_t* args) {
     printf("NOT IMPLEMENTED!!!\n");
     return 0;
@@ -294,6 +304,7 @@ Command commandTable[] = {
     {"do_erase_all", 0, do_erase_all},
     {"control_debug_power", 1, control_debug_power},
     {"read_ap_addr", 1, read_ap_addr},
+    {"write_ap_addr", 2, write_ap_addr},
     {"read_ap_csw", 0, read_csw},
     {"read_tar", 0, read_tar},
     {"read_drw", 0, read_drw},
