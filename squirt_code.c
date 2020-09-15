@@ -384,7 +384,7 @@ int main(int argc, char** argv) {
     uint32_t flash_addr = 0x0;
     uint32_t flash_data;
     printf("Beginning WRITE!\n");
-    int write_err;
+    int write_err=0;
     while(fread(&flash_data, sizeof(flash_data), 1, code_source) == 1) {
         if(flash_addr >= 0x80000) {
             printf("Binary file too big to fit in FLASH. Quitting mid-write\n");
@@ -395,6 +395,9 @@ int main(int argc, char** argv) {
         // (I think thats where it is) to make sure things don't go too fast
         printf("Writing 0x%x = 0x%x\n", flash_addr, flash_data);
         do {
+            if(write_err) {
+                usleep(5);
+            }
             write_err = mem_ap_write(spi_registers, flash_addr, flash_data);
         } while(write_err == SWD_ACK_WAIT);
         if(write_err) {
