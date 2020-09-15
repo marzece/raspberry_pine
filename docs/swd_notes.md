@@ -122,6 +122,8 @@ So, I THINK (THINK!) what I should do is place the binary compiled code is in fl
 0x0 and just going up from there.
 I fear there's some need to split instructions and data...idk though dude.
 I also fear there's little endian/big endian bullshit that needs to be considered.
+(N.b. THE CFG register (addr=0xF4) of the MEM-AP says if big-endian is supported...and it would seem
+it is not. So everything is little endian).
 
 I think my plan from here is just squirt the code across the SWD verbatim, starting at 0x0 and going up.
 Then doing a RESET (in the CNTRL-AP). Then seeing if things work.
@@ -141,5 +143,62 @@ If things work, good...if not I have to do some work.
 6. Set the DP's SELECT reg to APSEL=0x0 APBANK=0x0
 7. Start doing DRW/TAR IO
 
+
+## Random extemporanius baloney
+So doing random IO with the DRW/TAR at or around address 0x0 (which is the flash) shows some unexpected behavior.
+First writing (say) a value of 0xABCD to 0x0 then reading the value back gives 0xABFF.
+Writing  0xABCD1234 gives 0xABCD12FF...so the bottom bits seem "stuck".
+Secondly, doing the above write to address 0x0 then reading back (say) address 0x4 or 0x10 or whatever gives
+0xABCD12FF (same value as 0x0).
+All the addresses at or around 0x0 read back the same value.
+I haven't tested at what address that behavior changes (if it does at all).
+
+Reading the docs for the NRF seems to suggest that non-volatile memory (i.e. flash) is controlled
+by the NVMC (non-volatile memory controller). So perhaps it's not as simple as just yeet-ing the code
+into the memory where I want it.
+
+Table 6 (page 21) of the NRF62832 datasheet gives the NVMC address as 0x4001E000.
+
+Chapter 11 (page 26) of the NRF datasheet gives info about the NVMC. First it has a 
+config register at offset 0x504 (i.e. global addres 0x4001E504)
+
+...Lots of debugging and testing and playing later...
+I played around with the NVMC registers quite a bit, erasing chunks of memory and then 
+enabling writing and then going to write values at global memory address 0x0.
+But always I saw 0xFF in the bottom-8 bits...very perplexing.
+
+So I eventually found out that the MEM-AP's CSW register has a 'size' field,
+below are some screenshots.
+
+![](resources/csw_fields.png)
+![](resources/csw_size_values.png)
+
+Reading the value in the CSW gives 0x23000040. This gives the size=0x0...aka byte length data transfers.
+The NVMC documentation chapter explicitly says "only full 32-bit words can be
+written to Flash using the NVMC interface".
+So my suspicion is/was that if I modify that size field to 32-bit (aka size = 0b010) then do data transfers
+things will work.
+
+Testing this out as follows
+
+1. Enable erase in NVMC config
+2. Perform ERASEALL in NVMC
+3. Enable WRITE in NVMC config (and disable erase)
+4. Read value at TAR=0x0 (returns 0xFFFFFFFF)
+5. Write value at TAR=0x0 as 0x0
+6. Read value at TAR=0x0 (returns 0x0)
+7. Success!
+
+Since this worked, one thing worth noting is that the NVMC documentation says it can only write
+like 100 times betweeen erases. I assume this is ~100 times for each register...or else you couldn't
+fill up the memory. I don't expect this will be a problem since my basic plan right now is to
+nuke the memory (erase all) then write the binary data for the program...then be done. No re-writing
+ever necessary.
+
+Second point from the docs that I want to make sure is mentioned. When the non-volatile memory is erased
+it's set to all '1' (0xFFFFFFFF). When writing to memory all I can do is set bits to '0'. So (for example)
+if I set some register to a value of 0x0 the only way to set any other value in that register is to do an erase
+to set it back 0xFFFFFFFF then write the value I want.
+Again this should be okay so long as I stick to the pattern of erase then write and never re-write.
 
 
