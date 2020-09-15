@@ -55,8 +55,6 @@ int perform_swd_io(SPIRegisters spi_registers, SWD_Packet* packet_data) {
     uint32_t header_word = create_header_word(packet_data->header);
     int parity_bit;
 
-
-    printf("%s", packet_data->debug_string);
     SPI_Data spi_data;
     spi_data.n_writes = 1;
     spi_data.mosi[0] = header_word;
