@@ -119,6 +119,7 @@ SPI_Data swd_protocol_reset();
 DPIDR_Reg interpret_dp_idr_reg(uint32_t word);
 SWD_APIDRCode interpret_ap_idr_code(uint32_t word);
 MEM_AP_CSW_Reg interpret_ap_csw_reg(uint32_t word);
+SWD_CNTRL_STAT_Reg interpret_ctrlstat_reg(uint32_t word);
 uint8_t create_header_word(SWD_Header header_values);
 
 #endif
