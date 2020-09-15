@@ -1,6 +1,8 @@
 
-all: cli test_mem
+all: cli test_mem squirt_code
 
+squirt_code: squirt_code.c common_utils.o swd.o rbpi.o
+	cc -g $^ -o $@
 test_mem: test_mem.c common_utils.o swd.o rbpi.o
 	cc -g $^ -o $@
 
