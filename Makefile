@@ -1,8 +1,8 @@
-
 all: cli test_mem flash
 
 flash: flash.c common_utils.o swd.o rbpi.o
 	cc -g $^ -o $@
+
 test_mem: test_mem.c common_utils.o swd.o rbpi.o
 	cc -g $^ -o $@
 
@@ -14,6 +14,7 @@ common_utils.o: common_utils.c
 
 swd.o: swd.c
 	cc -g -c $^ -o $@
+
 rbpi.o: rbpi.c
 	cc -g -c $^ -o $@
 
