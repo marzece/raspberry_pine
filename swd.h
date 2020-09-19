@@ -25,6 +25,14 @@ enum SWD_ERROR {
 #define SWD_SWD_TO_JTAG_SEQ 0xE73C // See page 5-111 of ADIv5 Spec
 #define SWD_SWD_TO_JTAG_SEQ_LEN 16
 
+// MEM-AP stuff (todo need to make MEM-AP accesses and such its own module probably)
+#define CSW_OFFSET 0x0
+#define TAR_OFFSET 0x4
+#define DRW_OFFSET 0xC
+#define NVMC_OFFSET 0x4001E000
+#define NVMC_CONFIG_OFFSET 0x504
+#define NVMC_ERASEALL 0x50C
+
 typedef struct SWD_DPIDR_Reg {
     uint32_t revision;
     uint32_t part_number;
@@ -110,6 +118,7 @@ SWD_Packet swd_ap_write_eraseall();
 SWD_Packet swd_read_erase_status();
 SWD_Packet swd_read_protect_status_reg();
 SWD_Packet swd_write_abort_reg(SWD_ABORT_Reg reg);
+SWD_Packet swd_write_csw_reg(MEM_AP_CSW_Reg values);
 SWD_Packet swd_read_ap_addr(uint8_t addr);
 SWD_Packet swd_write_ap_addr(uint8_t addr, uint32_t data);
 

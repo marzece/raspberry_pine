@@ -209,10 +209,10 @@ int control_debug_power(uint32_t* args) {
 }
 int clear_stickyerr(uint32_t* args) {
     SWD_ABORT_Reg reg = {
-     .ORUNERRCLR = 0,
-     .WDERRCLR = 0,
+     .ORUNERRCLR = 1,
+     .WDERRCLR = 1,
      .SKERRCLR = 1,
-     .STKCMPCLR = 0,
+     .STKCMPCLR = 1,
      .DAPABORT = 0 };
 
     SWD_Packet write_abort_reg = swd_write_abort_reg(reg);

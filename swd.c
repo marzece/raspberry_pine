@@ -198,6 +198,33 @@ SWD_Packet swd_read_protect_status_reg() {
     return ret;
 }
 
+SWD_Packet swd_write_csw_reg(MEM_AP_CSW_Reg values) {
+    SWD_Packet ret;
+    SWD_Header* header = &ret.header;
+    header->APnDP = 1;
+    header->RnW = 0;
+    header->addr = CSW_OFFSET;
+
+    uint32_t data = 0;
+    // For the NRF in particular I'm pretty sure many of the fields in the fields
+    // in the upper bits of the CSW reg are not relevant b/c they're not required by
+    // the SWD spec...so I don't include them here at all
+    // Also lots of values are in the CSW are read only
+
+    // I'm not totally sure what the prot does, the spec says its mostly implementation defined
+    // and it resets to 0x23 and that demonstrably seems to be fine...so I'm just gonna hardcode
+    // it to that so I don't have to worry about if other values of it are okay or not
+    values.prot = 0x23;
+
+    data |= (values.prot & 0x3F) << 24;
+    data |= (values.mode & 0xF) << 8;
+    data |= (values.addr_increment & 0x3) << 4;
+    data |= (values.size & 0x7) << 0;
+    ret.data = data;
+    ret.debug_string = "WRITE CSW Reg\n";
+    return ret;
+}
+
 SWD_Packet swd_read_ap_addr(uint8_t addr) {
     SWD_Packet ret;
     SWD_Header* header = &ret.header;

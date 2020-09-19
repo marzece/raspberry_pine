@@ -27,13 +27,6 @@
 #define SWD_STOP_BIT   0x02
 #define SWD_PARK_BIT   0x01
 
-// MEM-AP stuff (todo need to make MEM-AP accesses and such its own module probably)
-#define CSW_OFFSET 0x0
-#define TAR_OFFSET 0x4
-#define DRW_OFFSET 0xC
-#define NVMC_OFFSET 0x4001E000
-#define NVMC_CONFIG_OFFSET 0x504
-#define NVMC_ERASEALL 0x50C
 
 
 int perform_swd_io(SPIRegisters spi_registers, SWD_Packet* packet_data) {
@@ -214,18 +207,17 @@ SWD_Packet debug_power(SPIRegisters spi_registers, int powerup) {
     return read_ctrlstat_reg;
 }
 
-FILE* setup_source(const char* fn) {
-    FILE* ret = fopen(fn, "rb");
-    return ret;
+int reset_nrf(SPIRegisters spi_registers) {
+    SWD_SELECT_Reg select_reg = { .APSEL = 0x1, .APBANKSEL = 0x0, .DPBANKSEL = 0x0 };
+    SWD_Packet write_select_packet = swd_write_select_reg(select_reg);
+    perform_swd_io(spi_registers, &write_select_packet);
+
+    SWD_Packet write_reset = swd_write_ap_addr(0x0, 0x1);
+    perform_swd_io(spi_registers, &write_reset);
+    write_reset = swd_write_ap_addr(0x0, 0x0);
+    return  perform_swd_io(spi_registers, &write_reset);
 }
 
-int read_word(FILE* file, uint32_t *val_p) {
-    if(!file) {
-        return -1;
-    }
-    return fread(val_p, sizeof(uint32_t), 1, file);
-        // TODO should check eof here?
-}
 
 int main(int argc, char** argv) {
 
@@ -349,6 +341,11 @@ int main(int argc, char** argv) {
     // TODO could maybe check the erase status here...make sure an erase isn't going on
     // that'd be good eventually maybe
 
+    if(reset_nrf(spi_registers)) {
+        printf("Error doing reset\n");
+        goto done;
+    }
+
     // Now done with the CTRL-AP, lets move to the MEM-AP/AHB-AP
     select_reg.APSEL = 0x0;
     select_reg.APBANKSEL = 0x0;
@@ -357,19 +354,16 @@ int main(int argc, char** argv) {
     perform_swd_io(spi_registers, &write_select_packet);
 
     // Read the CSW make sure the size field is 0b010 (32-bit transfers)
-    SWD_Packet read_csw = swd_read_ap_addr(CSW_OFFSET);
-    perform_swd_io(spi_registers, &read_csw);
-    perform_swd_io(spi_registers, &read_csw);
+    MEM_AP_CSW_Reg csw;
+    memset(&csw, 0, sizeof(csw));
+    csw.size = 0b010;
+    csw.addr_increment = 0;
 
-    MEM_AP_CSW_Reg csw = interpret_ap_csw_reg(read_csw.data);
-    if(csw.size != 0b010) {
-        // TODO, abort
-    }
-    if(csw.addr_increment != 0) {
-        // TODO, abort
-    }
-    if(csw.transfer_in_progress != 0) {
-        // TODO, abort
+    SWD_Packet write_csw = swd_write_csw_reg(csw);
+
+    if(perform_swd_io(spi_registers, &write_csw)) {
+        printf("Error writing to MEM AP CSW reg\n");
+        goto done;
     }
 
     // Next erase all the NVMC memory
@@ -396,31 +390,36 @@ int main(int argc, char** argv) {
         printf("Writing 0x%x = 0x%x\n", flash_addr, flash_data);
         do {
             if(write_err) {
+                // I'm pretty sure if I got an ACK_WAIT then the TAR address doens't increment
+                // if that's not true I'll have to incremement it myself or something
                 usleep(5);
             }
             write_err = mem_ap_write(spi_registers, flash_addr, flash_data);
         } while(write_err == SWD_ACK_WAIT);
+
         if(write_err) {
-            printf("Error encountered while writing addr=0x%x\n", flash_addr);
+            printf("Error(%i) encountered while writing addr=0x%x\n", write_err, flash_addr);
             goto done;
         }
         flash_addr += 0x4;
     }
-    printf("Writing done, doing check now\n");
     if(ferror(code_source) || !feof(code_source)) {
         printf("Error encountered reading data from binary code source\n");
         goto done;
     }
-    mem_ap_read(spi_registers, NVMC_OFFSET + NVMC_CONFIG_OFFSET);
-    
+
+
+    printf("Writing done, doing check now\n");
     // Now that writing has finished, set the NVMC back to read only
     // then go through all the data and confirm that it's right
     nvmc_config(spi_registers, 0, 0);
     fseek(code_source, 0, SEEK_SET);
     int err_count = 0;
     flash_addr = 0;
+
+
     while(fread(&flash_data, sizeof(flash_data), 1, code_source) == 1) {
-        // DOn't need to check for stepping past end of flash memory b/c we
+        // Don't need to check for stepping past end of flash memory b/c we
         // won't get here if that happened above...and unless someone re-wrote the 
         // code source file between above and now we're fine to assume everything's ok
         uint32_t rb_data = mem_ap_read(spi_registers, flash_addr);
@@ -440,7 +439,10 @@ int main(int argc, char** argv) {
     }
 
     // And finally do a system reset I guess
-    // TODO
+    if(reset_nrf(spi_registers)) {
+        printf("Error doing reset\n");
+        goto done;
+    }
 
     // Clean up
 done:
