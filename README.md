@@ -4,10 +4,11 @@ it uses the Raspberry PI's auxillary SPI pins, slightly modded with an external 
 for bi-directional SPI communication.
 ![](pictures/raspberry_pi_wiring.jpg)
 
-The resistor goes between pins 40 and 35 of the raspberry pi's GPIO, connecting the auxillary SPI MOSI
+The resistor goes between pins 38 and 35 of the raspberry pi's GPIO, connecting the auxillary SPI MOSI
 and MISO pins.
+![](pictures/raspberry_pine_connection_schem.png)
 
-Additionally this code requires no external libraries for programming the NRF,
+This code requires almost no external libraries for programming the NRF,
 which is something I personally like quite a lot.
 The only exception is that the SWD command line interface requires [linenoise](https://github.com/antirez/linenoise).
 
